@@ -11,7 +11,7 @@ class LocationService implements ILocationService {
     // Test if location services are enabled.
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      var data = await Geolocator.openLocationSettings();
+      //var data = await Geolocator.openLocationSettings();
       //return Future.error('Location services are disabled.');
     }
 

@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "149078150602",
+    "project_id": "umbrella-reminder-d50d6",
+    "storage_bucket": "umbrella-reminder-d50d6.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:149078150602:android:674269680891375ffb9333",
+        "android_client_info": {
+          "package_name": "com.example.umbrella_reminder"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "149078150602-0funl3gkrja7f9p9g37tgcb853db6eoa.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBp_CyWvJIbw7Wz8vEfLEPTmCHCfX7pH5k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "149078150602-0funl3gkrja7f9p9g37tgcb853db6eoa.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
