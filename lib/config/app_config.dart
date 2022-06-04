@@ -17,8 +17,11 @@ const double weatherInfoHeight = 40;
 const double weatherStatusFontSize = 20;
 const double remindMeFontSize = 20;
 const double switchSize = 100;
+const double refreshIconSize = 40;
 
 ///icons
+//refresh
+const IconData refreshIcon = Icons.refresh;
 //clear sky
 final FaIcon clearSky = FaIcon(
   FontAwesomeIcons.sun,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:umbrella_reminder/cubit/cubit_controller.dart';
 import 'package:umbrella_reminder/config/app_config.dart';
 import 'package:umbrella_reminder/config/app_config.dart' as conf;
@@ -21,11 +22,19 @@ class _HomePageState extends State<HomePage> {
   String? temperature;
   FaIcon? weatherIcon;
   late bool addressReceived;
+  late bool snackBarDismissed;
 
   @override
   void initState() {
     addressReceived = false;
+    snackBarDismissed = false;
+    context.read<CubitController>().checkLocationServices();
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -43,18 +52,42 @@ class _HomePageState extends State<HomePage> {
             context.read<CubitController>().getCurrentPosition();
             addressReceived = true;
           }
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              //Location Info
-              locationInfo(context),
-              //Weather info
-              weatherInfo(),
-              //cloud
-              cloud(),
-              //remind me
-              remind(context),
-            ],
+          return Center(
+            child: SizedBox(
+              width: AppConfig.screenWidth * 0.9,
+              height: AppConfig.screenHeight * 0.9,
+              child: Card(
+                color: Colors.blueGrey.shade100,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(80),
+                ),
+                elevation: 30,
+                child: Stack(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.all(AppConfig.screenWidth * 0.1),
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: refresh(),
+                      ),
+                    ),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        //Location Info
+                        locationInfo(context),
+                        //Weather info
+                        weatherInfo(),
+                        //cloud
+                        cloud(),
+                        //remind me
+                        remind(context),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         },
         listener: (context, state) {
@@ -82,9 +115,47 @@ class _HomePageState extends State<HomePage> {
                   state.position.latitude,
                   state.position.longitude,
                 );
+          } else if (state is LocationServiceEnable) {
+            context.read<CubitController>().getCurrentPosition();
+            setState(() {
+              snackBarDismissed = false;
+            });
+          } else if (state is LocationServiceDisable) {
+            if (!snackBarDismissed) {
+              _showSnackbar("Location Services is Needed!", "Close", 365);
+            }
           }
         },
       ),
+    );
+  }
+
+  void _showSnackbar(String message, String label, int durationAsDays) {
+    final snackBar = SnackBar(
+      duration: Duration(days: durationAsDays),
+      content: Text(message),
+      action: SnackBarAction(
+        label: label,
+        onPressed: () {
+          setState(() {
+            snackBarDismissed = true;
+            ScaffoldMessenger.of(context).clearSnackBars();
+          });
+        },
+      ),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
+  GestureDetector refresh() {
+    return GestureDetector(
+      child: const Icon(
+        conf.refreshIcon,
+        size: conf.refreshIconSize,
+      ),
+      onTap: () {
+        context.read<CubitController>().getCurrentPosition();
+      },
     );
   }
 
@@ -126,11 +197,11 @@ class _HomePageState extends State<HomePage> {
           alignment: Alignment.center,
           children: [
             Visibility(
-              visible: context.watch<CubitController>().isLocationLoading,
+              visible: context.watch<CubitController>().isWeatherLoading,
               child: const CircularProgressIndicator(),
             ),
             Visibility(
-              visible: !context.watch<CubitController>().isLocationLoading,
+              visible: !context.watch<CubitController>().isWeatherLoading,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -180,18 +251,11 @@ class _HomePageState extends State<HomePage> {
           ),
           Stack(
             children: [
-              Visibility(
-                visible: !context.watch<CubitController>().isWeatherLoading,
-                child: Text(
-                  weatherStatus ?? "Unknown",
-                  style: const TextStyle(
-                    fontSize: conf.weatherStatusFontSize,
-                  ),
+              Text(
+                weatherStatus ?? "Unknown",
+                style: const TextStyle(
+                  fontSize: conf.weatherStatusFontSize,
                 ),
-              ),
-              Visibility(
-                visible: context.watch<CubitController>().isWeatherLoading,
-                child: const CircularProgressIndicator(),
               ),
             ],
           ),
@@ -214,18 +278,11 @@ class _HomePageState extends State<HomePage> {
           ),
           Stack(
             children: [
-              Visibility(
-                visible: !context.watch<CubitController>().isWeatherLoading,
-                child: Text(
-                  temperature ?? "Unknown",
-                  style: const TextStyle(
-                    fontSize: conf.weatherStatusFontSize,
-                  ),
+              Text(
+                temperature ?? "Unknown",
+                style: const TextStyle(
+                  fontSize: conf.weatherStatusFontSize,
                 ),
-              ),
-              Visibility(
-                visible: context.watch<CubitController>().isWeatherLoading,
-                child: const CircularProgressIndicator(),
               ),
             ],
           ),

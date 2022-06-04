@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:umbrella_reminder/model/weather.dart';
 import 'package:umbrella_reminder/service/IWeather_service.dart';
 
@@ -12,16 +15,16 @@ class CubitController extends Cubit<AppState> {
   //weather service
   final IWeatherService weatherService;
 
-  bool isLocationLoading = false;
   bool isWeatherLoading = false;
   bool reminderOn = false;
+  bool locationCheck = false;
 
   CubitController(AppState initialState,
       {required this.locationService, required this.weatherService})
       : super(initialState);
 
   Future<void> getCurrentPosition() async {
-    changeLocationLoading(true);
+    changeWeatherLoading(true);
     final data = await locationService.determinePosition();
     if (data is Position) {
       emit(PositionReceived(data));
@@ -32,7 +35,6 @@ class CubitController extends Cubit<AppState> {
 
   Future<void> getAdress(double lat, double lon) async {
     final data = await locationService.getAddressFromCoordinates(lat, lon);
-    changeLocationLoading(false);
     if (data is Placemark) {
       emit(AddressReceived(data));
     } else {
@@ -45,18 +47,12 @@ class CubitController extends Cubit<AppState> {
     emit(ReminderState(reminderOn));
   }
 
-  void changeLocationLoading(bool b) {
-    isLocationLoading = b;
-    emit(LocationLoadingState(isLocationLoading));
-  }
-
   void changeWeatherLoading(bool b) {
     isWeatherLoading = b;
     emit(WeatherLoadingState(isWeatherLoading));
   }
 
   Future<void> getWeatherForecast(double lat, double lon) async {
-    changeWeatherLoading(true);
     final data = await weatherService.getWeather(lat, lon);
     changeWeatherLoading(false);
     if (data is Weather) {
@@ -64,6 +60,25 @@ class CubitController extends Cubit<AppState> {
     } else {
       emit(WeatherFail());
     }
+  }
+
+  void checkLocationServices() {
+    locationCheck = false;
+    const period = Duration(seconds: 2);
+    Timer.periodic(
+      period,
+      (Timer t) => Permission.location.serviceStatus.isEnabled.then(
+        (value) {
+          if (value && !locationCheck) {
+            locationCheck = true;
+            emit(LocationServiceEnable());
+          } else if (!value) {
+            locationCheck = false;
+            emit(LocationServiceDisable());
+          }
+        },
+      ),
+    );
   }
 }
 
@@ -89,12 +104,6 @@ class AddressReceived extends AppState {
 
 class AddressFail extends AppState {}
 
-class LocationLoadingState extends AppState {
-  final bool isLoading;
-
-  LocationLoadingState(this.isLoading);
-}
-
 class WeatherLoadingState extends AppState {
   final bool isLoading;
 
@@ -114,3 +123,7 @@ class WeatherReceived extends AppState {
 }
 
 class WeatherFail extends AppState {}
+
+class LocationServiceEnable extends AppState {}
+
+class LocationServiceDisable extends AppState {}
