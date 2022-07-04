@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:umbrella_reminder/cubit/cubit_controller.dart';
 import 'package:umbrella_reminder/config/app_config.dart';
 import 'package:umbrella_reminder/config/app_config.dart' as conf;
@@ -23,11 +22,13 @@ class _HomePageState extends State<HomePage> {
   FaIcon? weatherIcon;
   late bool addressReceived;
   late bool snackBarDismissed;
+  late bool reminderChanged;
 
   @override
   void initState() {
     addressReceived = false;
     snackBarDismissed = false;
+    reminderChanged = false;
     context.read<CubitController>().checkLocationServices();
     super.initState();
   }
@@ -75,13 +76,13 @@ class _HomePageState extends State<HomePage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         //Location Info
-                        locationInfo(context),
+                        locationInfo(),
                         //Weather info
                         weatherInfo(),
                         //cloud
                         cloud(),
                         //remind me
-                        remind(context),
+                        remind(),
                       ],
                     ),
                   ],
@@ -117,22 +118,25 @@ class _HomePageState extends State<HomePage> {
                 );
           } else if (state is LocationServiceEnable) {
             context.read<CubitController>().getCurrentPosition();
+            ScaffoldMessenger.of(context).clearSnackBars();
             setState(() {
               snackBarDismissed = false;
             });
           } else if (state is LocationServiceDisable) {
             if (!snackBarDismissed) {
-              _showSnackbar("Location Services is Needed!", "Close", 365);
+              _showSnackbar("Location Services Needed!", "Close");
             }
+          } else if (state is ReminderLoadingState) {
+            reminderChanged = state.isLoading;
           }
         },
       ),
     );
   }
 
-  void _showSnackbar(String message, String label, int durationAsDays) {
+  void _showSnackbar(String message, String label) {
     final snackBar = SnackBar(
-      duration: Duration(days: durationAsDays),
+      duration: const Duration(seconds: 5),
       content: Text(message),
       action: SnackBarAction(
         label: label,
@@ -159,9 +163,9 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Padding remind(BuildContext context) {
+  Padding remind() {
     return Padding(
-      padding: const EdgeInsets.only(top: 20.0),
+      padding: const EdgeInsets.only(top: 20),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -171,24 +175,90 @@ class _HomePageState extends State<HomePage> {
               fontSize: conf.remindMeFontSize,
             ),
           ),
-          SizedBox(
-            height: conf.switchSize,
-            width: conf.switchSize,
-            child: FittedBox(
-              child: Switch(
-                value: context.watch<CubitController>().reminderOn,
-                onChanged: (b) {
-                  context.read<CubitController>().toggleReminder(b);
-                },
+          const Padding(
+            padding: EdgeInsets.only(left: 20.0, right: 20, bottom: 20),
+            child: Text(
+              "(Sends push notification every day at selected time if it's rainy.)",
+              style: TextStyle(
+                fontSize: conf.remindMeSubfontSize,
               ),
             ),
           ),
+          SizedBox(
+            width: conf.timePickButtonWidth,
+            height: conf.timePickButtonHeight,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                primary: Colors.grey.shade300,
+              ),
+              onPressed: () {
+                context.read<CubitController>().changeSelectedTime(context);
+              },
+              child: Stack(
+                children: [
+                  Visibility(
+                    visible:
+                        !context.watch<CubitController>().selectedTimeLoading,
+                    child: Text(
+                      conf.AppConfig.notificationTime ?? 'unselected',
+                      style: const TextStyle(
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                  Visibility(
+                    visible:
+                        context.watch<CubitController>().selectedTimeLoading,
+                    child: const SizedBox(
+                      height: 25,
+                      width: 25,
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          remindSwitch(),
         ],
       ),
     );
   }
 
-  SizedBox locationInfo(BuildContext context) {
+  Row remindSwitch() {
+    return Row(
+      children: [
+        Padding(
+          padding: EdgeInsets.only(left: conf.remindSwitchLeftPadding),
+          child: SizedBox(
+            height: conf.switchSize,
+            width: conf.switchSize,
+            child: FittedBox(
+              child: Switch(
+                value: conf.AppConfig.reminderOn,
+                onChanged: (b) {
+                  //update database
+                  context.read<CubitController>().toggleReminder(
+                        conf.AppConfig.deviceId,
+                        conf.AppConfig.device,
+                        b,
+                        conf.AppConfig.notificationTime ?? 'unselected',
+                      );
+                  conf.AppConfig.reminderOn = b;
+                },
+              ),
+            ),
+          ),
+        ),
+        Visibility(
+          visible: reminderChanged,
+          child: const CircularProgressIndicator(),
+        ),
+      ],
+    );
+  }
+
+  SizedBox locationInfo() {
     return SizedBox(
       height: conf.locationInfoHeight,
       child: Padding(

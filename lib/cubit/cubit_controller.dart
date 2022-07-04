@@ -1,10 +1,13 @@
 import 'dart:async';
 
 import 'package:bloc/bloc.dart';
+import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:umbrella_reminder/config/app_config.dart';
 import 'package:umbrella_reminder/model/weather.dart';
+import 'package:umbrella_reminder/service/IFirestore_service.dart';
 import 'package:umbrella_reminder/service/IWeather_service.dart';
 
 import '../service/ILocation_service.dart';
@@ -14,13 +17,19 @@ class CubitController extends Cubit<AppState> {
   final ILocationService locationService;
   //weather service
   final IWeatherService weatherService;
+  //firebase service
+  final IFirestoreService firestoreService;
 
   bool isWeatherLoading = false;
   bool reminderOn = false;
   bool locationCheck = false;
+  bool selectedTimeLoading = false;
+  TimeOfDay? selectedTime = const TimeOfDay(hour: 6, minute: 0);
 
   CubitController(AppState initialState,
-      {required this.locationService, required this.weatherService})
+      {required this.firestoreService,
+      required this.locationService,
+      required this.weatherService})
       : super(initialState);
 
   Future<void> getCurrentPosition() async {
@@ -42,14 +51,21 @@ class CubitController extends Cubit<AppState> {
     }
   }
 
-  void toggleReminder(bool b) {
-    reminderOn = b;
-    emit(ReminderState(reminderOn));
+  Future<void> toggleReminder(
+      String userId, String device, bool notification, String time) async {
+    changeRemindLoading(true);
+    reminderOn = notification;
+    await firestoreService.addUser(
+      userId: userId,
+      device: device,
+      notification: notification,
+      time: time,
+    );
+    changeRemindLoading(false);
   }
 
   void changeWeatherLoading(bool b) {
     isWeatherLoading = b;
-    emit(WeatherLoadingState(isWeatherLoading));
   }
 
   Future<void> getWeatherForecast(double lat, double lon) async {
@@ -80,6 +96,35 @@ class CubitController extends Cubit<AppState> {
       ),
     );
   }
+
+  Future<void> changeSelectedTime(BuildContext context) async {
+    selectedTimeLoading = true;
+    final TimeOfDay? timeOfDay = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      initialEntryMode: TimePickerEntryMode.dial,
+    );
+    selectedTime = timeOfDay;
+    String hour = selectedTime!.hour > 10
+        ? selectedTime!.hour.toString()
+        : '0${selectedTime!.hour}';
+    String minute = selectedTime!.minute > 10
+        ? selectedTime!.minute.toString()
+        : '0${selectedTime!.minute}';
+    String period = selectedTime!.period.name;
+    AppConfig.notificationTime = '$hour : $minute $period';
+    //update db
+    await firestoreService.addUser(
+        userId: AppConfig.deviceId,
+        device: AppConfig.device,
+        notification: AppConfig.reminderOn,
+        time: AppConfig.notificationTime ?? 'unselected');
+    selectedTimeLoading = false;
+  }
+
+  void changeRemindLoading(bool b) {
+    emit(ReminderLoadingState(b));
+  }
 }
 
 abstract class AppState {}
@@ -104,16 +149,10 @@ class AddressReceived extends AppState {
 
 class AddressFail extends AppState {}
 
-class WeatherLoadingState extends AppState {
+class ReminderLoadingState extends AppState {
   final bool isLoading;
 
-  WeatherLoadingState(this.isLoading);
-}
-
-class ReminderState extends AppState {
-  final bool reminderOn;
-
-  ReminderState(this.reminderOn);
+  ReminderLoadingState(this.isLoading);
 }
 
 class WeatherReceived extends AppState {

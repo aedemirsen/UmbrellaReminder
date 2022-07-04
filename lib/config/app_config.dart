@@ -4,6 +4,10 @@ import 'package:umbrella_reminder/model/weather.dart';
 
 class AppConfig {
   static double screenWidth = 0, screenHeight = 0;
+  static String deviceId = "";
+  static String device = "";
+  static bool reminderOn = false;
+  static String? notificationTime;
 }
 
 const String baseUrl = 'https://api.open-meteo.com/v1';
@@ -16,8 +20,12 @@ const double locationInfoHeight = 150;
 const double weatherInfoHeight = 40;
 const double weatherStatusFontSize = 20;
 const double remindMeFontSize = 20;
+const double remindMeSubfontSize = 12;
 const double switchSize = 100;
 const double refreshIconSize = 40;
+final double remindSwitchLeftPadding = (AppConfig.screenWidth * 0.9 - 100) / 2;
+const double timePickButtonWidth = 150;
+const double timePickButtonHeight = 40;
 
 ///icons
 //refresh
@@ -65,7 +73,7 @@ final FaIcon thunder = FaIcon(
   size: iconSize,
 );
 
-final Map<int, WeatherData> weatherStatus = {
+final Map<double, WeatherData> weatherStatus = {
   0: WeatherData('Clear Sky', clearSky),
   1: WeatherData('Mainly Clear', clearSky),
   2: WeatherData('Partly Cloudy', partylCloudy),

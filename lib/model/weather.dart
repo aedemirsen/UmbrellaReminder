@@ -43,10 +43,10 @@ class Weather {
 
 class CurrentWeather {
   double? temperature;
-  int? weathercode;
+  double? weathercode;
   String? time;
   double? windspeed;
-  int? winddirection;
+  double? winddirection;
 
   CurrentWeather(
       {this.temperature,
@@ -57,10 +57,10 @@ class CurrentWeather {
 
   CurrentWeather.fromJson(Map<String, dynamic> json) {
     temperature = json['temperature'].toDouble();
-    weathercode = json['weathercode'];
+    weathercode = json['weathercode'].toDouble();
     time = json['time'];
     windspeed = json['windspeed'].toDouble();
-    winddirection = json['winddirection'];
+    winddirection = json['winddirection'].toDouble();
   }
 
   Map<String, dynamic> toJson() {
